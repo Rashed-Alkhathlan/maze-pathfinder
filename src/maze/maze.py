@@ -1,20 +1,21 @@
-import os
 import random
 import time
-
 import numpy as np
 
 class Maze:
     """
-    Recursive Backtracking Maze Firas style idk bro.
+    Recursive Backtracking Maze my style idk.
     """
-    def __init__(self, size, print_each_step=False):
+    def __init__(self, size, weighted=False, print_each_step=False):
+        self.is_weighted = weighted
         self._print = print_each_step
+        self.fully_generated = False
 
         self.size = 2 * size + 1
         # we represent both cells and paths in this array
         # so size is not just width x height but rather (2 * size + 1)
         self.maze = np.ones((self.size, self.size), dtype=int)
+
 
     def _check_neighbors(self, y, x, offset=2):
         # a neighbor is valid iff
@@ -48,6 +49,7 @@ class Maze:
                 neighbors.append((y, right, 'right'))
 
         return neighbors
+
 
     def generate_maze_(self):
         stack = []
@@ -91,15 +93,100 @@ class Maze:
                 wall_position = (x + x_neighbor) // 2
                 self.maze[y][wall_position] = 0
 
+        self.fully_generated = True
+        if self.fully_generated and self.is_weighted:
+            self.make_weighted_(probability=0.3, weight_range=(2, 10))
+
+
     def print_maze(self):
         print("\033[H", end="")
 
-        for row in self.maze:
-            line = ""
-            for cell in row:
-                if cell == 1:
-                    line += "██"
-                else:
-                    line += "  "
-            print(line)
-        print("\n", end="", flush=True)
+        if not self.is_weighted:
+            for row in self.maze:
+                line = ""
+                for cell in row:
+                    if cell == 1:
+                        line += "██"
+                    else:
+                        line += "  "
+                print(line)
+            print("\n", end="", flush=True)
+
+        else:
+            start = (1, 1)
+            goal = (self.size - 2, self.size - 2)
+
+            # collect current weights in maze
+            weights = self.maze[self.maze > 1]
+            max_weight = weights.max() if len(weights) > 0 else 2
+            min_weight = weights.min() if len(weights) > 0 else 2
+
+            # low -> high weight colors
+            # green -> yellow -> orange -> red
+            color_scale = [236, 238, 240, 242, 244, 246, 248]
+
+
+            for y, row in enumerate(self.maze):
+                line = ""
+                for x, cell in enumerate(row):
+
+                    # walls
+                    if cell == 1:
+                        line += "\033[90m██\033[0m"
+
+                    # start
+                    elif (y, x) == start:
+                        line += "\033[44mST\033[0m"
+
+                    # goal
+                    elif (y, x) == goal:
+                        line += "\033[45mGL\033[0m"
+
+                    # normal unweighted path
+                    elif cell == 0:
+                        line += "  "
+
+                    # weighted path
+                    else:
+                        if max_weight == min_weight:
+                            color_idx = 0
+                        else:
+                            normalized = (cell - min_weight) / (max_weight - min_weight)
+                            color_idx = int(normalized * (len(color_scale) - 1))
+
+                        bg = color_scale[color_idx]
+                        line += f"\033[48;5;{bg}m  \033[0m"
+
+                print(line)
+
+            print("\n", end="", flush=True)
+
+
+    def make_weighted_(self, probability:float, weight_range: tuple):
+        """
+        Parameters
+        ----------
+        probability: (0, 1.0)
+        weight_range: must be in the range of (2, inf)
+
+        Returns
+        -------
+        None, makes the maze weighted inplace
+        """
+
+        if not self.fully_generated:
+            raise Exception("how do you want to add weights if maze is not complete .-.")
+
+        low, high = weight_range
+        start = (1, 1)
+        goal = (self.size - 2, self.size - 2)
+
+        for row in range(1, self.size - 1):
+            for column in range(1, self.size - 1):
+                if (row, column) == start or (row, column) == goal:
+                    continue
+
+                if self.maze[row][column] == 0:
+                    if np.random.random() < probability:
+                        random_weight = np.random.randint(low, high + 1)
+                        self.maze[row][column] = random_weight
