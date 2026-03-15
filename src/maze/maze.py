@@ -1,192 +1,208 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import random
-import time
-import numpy as np
+from typing import Iterable
 
+
+Coordinate = tuple[int, int]
+
+
+@dataclass(slots=True)
 class Maze:
-    """
-    Recursive Backtracking Maze my style idk.
-    """
-    def __init__(self, size, weighted=False, print_each_step=False):
-        self.is_weighted = weighted
-        self._print = print_each_step
-        self.fully_generated = False
+    logical_size: int
+    grid: list[list[int]]
+    weighted: bool = False
+    seed: int | None = None
+    loop_factor: float = 0.18
 
-        self.size = 2 * size + 1
-        # we represent both cells and paths in this array
-        # so size is not just width x height but rather (2 * size + 1)
-        self.maze = np.ones((self.size, self.size), dtype=int)
+    WALL = 1
+    PASSAGE = 0
 
+    @classmethod
+    def generate(
+        cls,
+        size: int = 15,
+        *,
+        weighted: bool = False,
+        seed: int | None = None,
+        loop_factor: float = 0.18,
+        weight_probability: float = 0.3,
+        weight_range: tuple[int, int] = (2, 10),
+    ) -> "Maze":
+        if size < 2:
+            raise ValueError("maze size must be at least 2")
+        if not 0 <= loop_factor <= 1:
+            raise ValueError("loop_factor must be between 0 and 1")
 
-    def _check_neighbors(self, y, x, offset=2):
-        # a neighbor is valid iff
-        # 1) in grid (i.e > 0)
-        # 2) its value = 1 (not visited)
+        grid_size = 2 * size + 1
+        grid = [[cls.WALL for _ in range(grid_size)] for _ in range(grid_size)]
+        rng = random.Random(seed)
+        stack: list[Coordinate] = [(1, 1)]
+        grid[1][1] = cls.PASSAGE
 
-        neighbors = []
+        while stack:
+            row, col = stack[-1]
+            neighbors = cls._carvable_neighbors(grid, row, col, grid_size)
 
-        # check up (y decreases)
-        up = y - offset
-        if up > 0:
-            if self.maze[up][x] == 1:
-                neighbors.append((up, x, 'up'))
-
-        # check down (y increases)
-        down = y + offset
-        if down < self.size - 1:
-            if self.maze[down][x] == 1:
-                neighbors.append((down, x, 'down'))
-
-        # check left (x decreases)
-        left = x - offset
-        if left > 0:
-            if self.maze[y][left] == 1:
-                neighbors.append((y, left, 'left'))
-
-        # check right (x increases)
-        right = x + offset
-        if right < self.size - 1:
-            if self.maze[y][right] == 1:
-                neighbors.append((y, right, 'right'))
-
-        return neighbors
-
-
-    def generate_maze_(self):
-        stack = []
-        offset = 2 # because we have walls, we need to look 2 indices away and not 1
-
-        y, x = 1, 1
-        #initially the first cell is carved
-        self.maze[y][x] = 0
-        stack.append((y, x))
-
-        while len(stack) > 0:
-            #--------
-            if self._print:
-                self.print_maze()
-                time.sleep(0.001)
-            #--------
-
-            y, x = stack[-1] # look at last carved cell
-            cell_neighbors = self._check_neighbors(y, x, offset)
-
-            if len(cell_neighbors) > 0:
-                #if there are neighbors continue
-                y_neighbor, x_neighbor, direction = random.choice(cell_neighbors)
-            else:
-                #else, backtrack
+            if not neighbors:
                 stack.pop()
                 continue
 
-            #carve the neighbor
-            self.maze[y_neighbor][x_neighbor] = 0
+            next_row, next_col = rng.choice(neighbors)
+            wall_row = (row + next_row) // 2
+            wall_col = (col + next_col) // 2
 
-            #push neighbor to stack
-            stack.append((y_neighbor, x_neighbor))
+            grid[wall_row][wall_col] = cls.PASSAGE
+            grid[next_row][next_col] = cls.PASSAGE
+            stack.append((next_row, next_col))
 
-            #carve the wall between the 2 cells
-            if direction == 'up' or direction == 'down':
-                wall_position = (y + y_neighbor) // 2 # if 3 and 5 then wall is on 4
-                self.maze[wall_position][x] = 0
+        maze = cls(
+            logical_size=size,
+            grid=grid,
+            weighted=weighted,
+            seed=seed,
+            loop_factor=loop_factor,
+        )
+        maze.add_loops(rng=rng, factor=loop_factor)
+        if weighted:
+            maze.apply_weights(
+                rng=rng,
+                probability=weight_probability,
+                weight_range=weight_range,
+            )
+        return maze
 
-            if direction == 'left' or direction == 'right':
-                wall_position = (x + x_neighbor) // 2
-                self.maze[y][wall_position] = 0
+    @classmethod
+    def from_grid(
+        cls,
+        grid: Iterable[Iterable[int]],
+        *,
+        weighted: bool = False,
+        seed: int | None = None,
+        loop_factor: float = 0.0,
+    ) -> "Maze":
+        rows = [list(row) for row in grid]
+        if not rows or any(len(row) != len(rows[0]) for row in rows):
+            raise ValueError("maze grid must be a non-empty rectangle")
+        if len(rows) != len(rows[0]):
+            raise ValueError("maze grid must be square")
+        logical_size = (len(rows) - 1) // 2
+        return cls(
+            logical_size=logical_size,
+            grid=rows,
+            weighted=weighted,
+            seed=seed,
+            loop_factor=loop_factor,
+        )
 
-        self.fully_generated = True
-        if self.fully_generated and self.is_weighted:
-            self.make_weighted_(probability=0.3, weight_range=(2, 10))
+    @staticmethod
+    def _carvable_neighbors(
+        grid: list[list[int]],
+        row: int,
+        col: int,
+        grid_size: int,
+    ) -> list[Coordinate]:
+        neighbors: list[Coordinate] = []
+        for d_row, d_col in ((-2, 0), (2, 0), (0, -2), (0, 2)):
+            next_row = row + d_row
+            next_col = col + d_col
+            if not (0 < next_row < grid_size - 1 and 0 < next_col < grid_size - 1):
+                continue
+            if grid[next_row][next_col] == Maze.WALL:
+                neighbors.append((next_row, next_col))
+        return neighbors
 
+    @property
+    def grid_size(self) -> int:
+        return len(self.grid)
 
-    def print_maze(self):
-        print("\033[H", end="")
+    @property
+    def start(self) -> Coordinate:
+        return (1, 1)
 
-        if not self.is_weighted:
-            for row in self.maze:
-                line = ""
-                for cell in row:
-                    if cell == 1:
-                        line += "██"
-                    else:
-                        line += "  "
-                print(line)
-            print("\n", end="", flush=True)
+    @property
+    def goal(self) -> Coordinate:
+        end = self.grid_size - 2
+        return (end, end)
 
-        else:
-            start = (1, 1)
-            goal = (self.size - 2, self.size - 2)
+    def in_bounds(self, row: int, col: int) -> bool:
+        return 0 <= row < self.grid_size and 0 <= col < self.grid_size
 
-            # collect current weights in maze
-            weights = self.maze[self.maze > 1]
-            max_weight = weights.max() if len(weights) > 0 else 2
-            min_weight = weights.min() if len(weights) > 0 else 2
+    def is_wall(self, row: int, col: int) -> bool:
+        return self.grid[row][col] == self.WALL
 
-            # low -> high weight colors
-            # green -> yellow -> orange -> red
-            color_scale = [236, 238, 240, 242, 244, 246, 248]
+    def neighbors(self, node: Coordinate) -> list[Coordinate]:
+        row, col = node
+        candidates = ((row, col + 1), (row + 1, col), (row, col - 1), (row - 1, col))
+        return [
+            (next_row, next_col)
+            for next_row, next_col in candidates
+            if self.in_bounds(next_row, next_col) and not self.is_wall(next_row, next_col)
+        ]
 
+    def movement_cost(self, node: Coordinate) -> int:
+        row, col = node
+        value = self.grid[row][col]
+        return value if value > 1 else 1
 
-            for y, row in enumerate(self.maze):
-                line = ""
-                for x, cell in enumerate(row):
+    def path_cost(self, path: list[Coordinate]) -> int:
+        if not path:
+            return 0
+        return sum(self.movement_cost(node) for node in path[1:])
 
-                    # walls
-                    if cell == 1:
-                        line += "\033[90m██\033[0m"
+    def add_loops(self, *, rng: random.Random, factor: float) -> int:
+        if factor <= 0:
+            return 0
 
-                    # start
-                    elif (y, x) == start:
-                        line += "\033[44mST\033[0m"
-
-                    # goal
-                    elif (y, x) == goal:
-                        line += "\033[45mGL\033[0m"
-
-                    # normal unweighted path
-                    elif cell == 0:
-                        line += "  "
-
-                    # weighted path
-                    else:
-                        if max_weight == min_weight:
-                            color_idx = 0
-                        else:
-                            normalized = (cell - min_weight) / (max_weight - min_weight)
-                            color_idx = int(normalized * (len(color_scale) - 1))
-
-                        bg = color_scale[color_idx]
-                        line += f"\033[48;5;{bg}m  \033[0m"
-
-                print(line)
-
-            print("\n", end="", flush=True)
-
-
-    def make_weighted_(self, probability:float, weight_range: tuple):
-        """
-        Parameters
-        ----------
-        probability: (0, 1.0)
-        weight_range: must be in the range of (2, inf)
-
-        Returns
-        -------
-        None, makes the maze weighted inplace
-        """
-
-        if not self.fully_generated:
-            raise Exception("how do you want to add weights if maze is not complete .-.")
-
-        low, high = weight_range
-        start = (1, 1)
-        goal = (self.size - 2, self.size - 2)
-
-        for row in range(1, self.size - 1):
-            for column in range(1, self.size - 1):
-                if (row, column) == start or (row, column) == goal:
+        candidates: list[Coordinate] = []
+        for row in range(1, self.grid_size - 1):
+            for col in range(1, self.grid_size - 1):
+                if self.grid[row][col] != self.WALL:
                     continue
+                if row % 2 == 1 and col % 2 == 0:
+                    if self.grid[row][col - 1] != self.WALL and self.grid[row][col + 1] != self.WALL:
+                        candidates.append((row, col))
+                elif row % 2 == 0 and col % 2 == 1:
+                    if self.grid[row - 1][col] != self.WALL and self.grid[row + 1][col] != self.WALL:
+                        candidates.append((row, col))
 
-                if self.maze[row][column] == 0:
-                    if np.random.random() < probability:
-                        random_weight = np.random.randint(low, high + 1)
-                        self.maze[row][column] = random_weight
+        if not candidates:
+            return 0
+
+        loop_count = max(1, round(len(candidates) * factor))
+        loop_count = min(loop_count, len(candidates))
+        for row, col in rng.sample(candidates, loop_count):
+            self.grid[row][col] = self.PASSAGE
+        return loop_count
+
+    def apply_weights(
+        self,
+        *,
+        rng: random.Random,
+        probability: float = 0.3,
+        weight_range: tuple[int, int] = (2, 10),
+    ) -> None:
+        low, high = weight_range
+        for row in range(1, self.grid_size - 1):
+            for col in range(1, self.grid_size - 1):
+                if (row, col) in (self.start, self.goal):
+                    continue
+                if self.grid[row][col] == self.PASSAGE and rng.random() < probability:
+                    self.grid[row][col] = rng.randint(low, high)
+
+    def max_weight(self) -> int:
+        return max((value for row in self.grid for value in row if value > 1), default=1)
+
+    def to_dict(self) -> dict:
+        return {
+            "logical_size": self.logical_size,
+            "grid_size": self.grid_size,
+            "grid": [row[:] for row in self.grid],
+            "weighted": self.weighted,
+            "seed": self.seed,
+            "loop_factor": self.loop_factor,
+            "start": list(self.start),
+            "goal": list(self.goal),
+            "max_weight": self.max_weight(),
+        }

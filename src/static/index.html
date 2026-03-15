@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maze Solver Observatory</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Python algorithms, browser playback</p>
+          <h1>Maze Solver Observatory</h1>
+        </div>
+        <div class="hero-stack">
+          <form id="controls" class="control-card">
+            <div class="card-heading">
+              <h2>Run Settings</h2>
+            </div>
+            <label>
+              <span>Maze size</span>
+              <input id="size" name="size" type="number" min="5" max="60" value="15" />
+            </label>
+            <label>
+              <span>Seed</span>
+              <input id="seed" name="seed" type="number" min="0" placeholder="Auto" />
+            </label>
+            <label class="toggle">
+              <span>Weighted maze</span>
+              <input id="weighted" name="weighted" type="checkbox" />
+            </label>
+            <label>
+              <span>Loop factor</span>
+              <input id="loop-factor" name="loop_factor" type="range" min="0" max="0.35" step="0.01" value="0.18" />
+              <strong id="loop-factor-value">0.18</strong>
+            </label>
+            <label>
+              <span>Playback speed</span>
+              <input id="speed" name="speed" type="range" min="0.35" max="3.5" step="0.05" value="1" />
+              <strong id="speed-value">1.00x</strong>
+            </label>
+            <button id="run-button" type="submit">Generate and Run</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="summary-strip">
+        <div class="summary-card">
+          <span class="summary-label">Seed</span>
+          <strong id="seed-display">-</strong>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Mode</span>
+          <strong id="mode-display">-</strong>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Maze</span>
+          <strong id="maze-display">-</strong>
+        </div>
+        <div class="summary-card status">
+          <span class="summary-label">Run status</span>
+          <strong id="run-status">Waiting for first run</strong>
+        </div>
+      </section>
+
+      <section class="panel-stage">
+        <div class="panel-topline">
+          <h2>Solvers</h2>
+          <div class="legend-inline" aria-label="Maze legend">
+            <span class="legend-inline-item"><span class="legend-swatch wall"></span>Wall</span>
+            <span class="legend-inline-item"><span class="legend-swatch weight"></span>Weight</span>
+            <span class="legend-inline-item"><span class="legend-swatch visited"></span>Visited</span>
+            <span class="legend-inline-item"><span class="legend-swatch path"></span>Path</span>
+            <span class="legend-inline-item"><span class="legend-swatch endpoint"></span>Start / Goal</span>
+          </div>
+        </div>
+
+        <section class="panel-grid" id="panel-grid">
+          <article class="solver-panel" data-algorithm="BFS">
+            <header>
+              <h3>BFS</h3>
+              <span class="panel-state">Idle</span>
+            </header>
+            <canvas></canvas>
+          </article>
+          <article class="solver-panel" data-algorithm="DFS">
+            <header>
+              <h3>DFS</h3>
+              <span class="panel-state">Idle</span>
+            </header>
+            <canvas></canvas>
+          </article>
+          <article class="solver-panel" data-algorithm="Dijkstra">
+            <header>
+              <h3>Dijkstra</h3>
+              <span class="panel-state">Idle</span>
+            </header>
+            <canvas></canvas>
+          </article>
+          <article class="solver-panel" data-algorithm="A*">
+            <header>
+              <h3>A*</h3>
+              <span class="panel-state">Idle</span>
+            </header>
+            <canvas></canvas>
+          </article>
+        </section>
+      </section>
+
+      <section class="comparison-card">
+        <div class="section-heading">
+          <h2>Metrics</h2>
+        </div>
+        <div class="table-wrap">
+          <table id="comparison-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Explored</th>
+                <th>Runtime</th>
+                <th>Path Len</th>
+                <th>Path Cost</th>
+                <th>Found</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
