@@ -93,6 +93,28 @@ def reconstruct_path(
     return path
 
 
+def record_event(
+    events: list[TraceEvent],
+    kind: EventKind,
+    node: Coordinate,
+    frontier_size: int,
+) -> None:
+    row, col = node
+    events.append(
+        TraceEvent(
+            kind=kind,
+            row=row,
+            col=col,
+            frontier_size=frontier_size,
+        )
+    )
+
+
+def record_path(events: list[TraceEvent], path: list[Coordinate]) -> None:
+    for node in path:
+        record_event(events, "path", node, frontier_size=0)
+
+
 def result_from_search(
     *,
     algorithm: str,
@@ -110,8 +132,7 @@ def result_from_search(
     path = reconstruct_path(parents, maze.goal) if found else []
 
     if found:
-        for row, col in path:
-            events.append(TraceEvent(kind="path", row=row, col=col, frontier_size=0))
+        record_path(events, path)
 
     metrics = SolverMetrics(
         nodes_explored=nodes_explored,
