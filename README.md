@@ -1,44 +1,54 @@
 # Maze Solver Observatory
 
-Local FastAPI app for generating mazes in Python, solving them with BFS, DFS, Dijkstra, and A*, and visualizing all four traces side by side in the browser.
+An app that generates mazes in Python, solves the same maze with
+BFS, DFS, Dijkstra, and A*, and visualizes all four runs side by side in the
+browser.
 
-## What it does
+## Overview
 
-- Generates one seeded maze per run with Python recursive backtracking
-- Supports both unweighted and weighted mazes
-- Runs all four algorithms against the exact same maze
-- Animates each solver on its own canvas panel
-- Compares explored nodes, peak frontier size, runtime, path length, path cost, completion, and actual optimality
+This project is built to compare search behavior, not just final answers.
 
-`actual_optimal` means the algorithm matched Dijkstra's path cost on that specific maze.
+- One seeded maze is generated per run and shared by all algorithms
+- Weighted and unweighted mazes are both supported
+- The frontend animates each solver in real time on its own canvas
+- The comparison view highlights explored nodes, runtime, path length, path
+  cost, and whether a path was found
+- The backend keeps the solver logic in Python end to end
 
-## Install
+## Quick Start
 
-```bash
-python3 -m pip install -r requirements.txt
-```
+| Task | Command |
+| --- | --- |
+| Install dependencies | `python3 -m pip install -r requirements.txt` |
+| Run the app | `python3 -m uvicorn src.app:app --reload` |
+| Run tests | `python3 -m unittest discover -s tests` |
 
-## Run
+Open `http://127.0.0.1:8000` after starting the server.
 
-```bash
-uvicorn src.app:app --reload
-```
+The API test is skipped automatically if `fastapi` and `httpx` are not
+installed.
 
-Then open `http://127.0.0.1:8000`.
+## Algorithm Guide
 
-## Test
+For a detailed walkthrough of the solver code, including the shared helper layer
+and the maze methods the solvers depend on, see
+[Algorithm Explanation Guide](src/algorithms/explanation.md).
 
-```bash
-python3 -m unittest discover -s tests
-```
+## What You Can Explore
 
-The API test is skipped automatically if `fastapi` and `httpx` are not installed.
+- Seeded maze generation for reproducible runs
+- Braided mazes with multiple valid routes
+- Weighted cells that make cheapest path and shortest path diverge
+- Side-by-side BFS, DFS, Dijkstra, and A* playback
+- A shared API response from `/api/run` that powers the visualizer
 
-## Project layout
+## Project Layout
 
-- `src/maze/maze.py`: deterministic maze generation and traversal helpers
-- `src/algorithms/`: BFS, DFS, Dijkstra, A*, and shared solver result models
-- `src/comparison.py`: run orchestration and Dijkstra baseline comparison
-- `src/app.py`: FastAPI app and `/api/run` endpoint
-- `src/static/`: browser UI, styling, and canvas animation
-- `tests/`: maze, solver, and API verification
+| Path | Purpose |
+| --- | --- |
+| `src/maze/maze.py` | Deterministic maze generation plus traversal and cost helpers |
+| `src/algorithms/` | BFS, DFS, Dijkstra, A*, shared solver models, and explanation docs |
+| `src/comparison.py` | Run orchestration and solver comparison logic |
+| `src/app.py` | FastAPI app and `/api/run` endpoint |
+| `src/static/` | Browser UI, styling, and canvas animation |
+| `tests/` | Maze, solver, and API verification |
