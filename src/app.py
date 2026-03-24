@@ -7,7 +7,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src.comparison import run_algorithm_suite
+from src.comparison import run_algorithm_suite, run_batch, run_single_seed
+from src.scenarios import all_scenarios, get_scenario
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -24,6 +25,18 @@ class RunRequest(BaseModel):
     loop_factor: float = Field(default=0.18, ge=0.0, le=1.0)
 
 
+class ScenarioRunRequest(BaseModel):
+    algorithm: str
+    case: str
+
+
+class BatchRequest(BaseModel):
+    size: int = Field(default=15, ge=5, le=60)
+    weighted: bool = False
+    loop_factor: float = Field(default=0.18, ge=0.0, le=1.0)
+    count: int = Field(default=10, ge=1, le=50)
+
+
 @app.get("/")
 def read_index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -36,4 +49,30 @@ def run_visualization(request: RunRequest) -> dict:
         seed=request.seed,
         weighted=request.weighted,
         loop_factor=request.loop_factor,
+    )
+
+
+@app.get("/api/scenarios")
+def list_scenarios() -> list[dict]:
+    return all_scenarios()
+
+
+@app.post("/api/scenarios/run")
+def run_scenario(request: ScenarioRunRequest) -> dict:
+    scenario = get_scenario(request.algorithm, request.case)
+    return run_single_seed(
+        size=scenario["size"],
+        seed=scenario["seed"],
+        weighted=scenario["weighted"],
+        loop_factor=scenario["loop_factor"],
+    )
+
+
+@app.post("/api/batch")
+def run_batch_endpoint(request: BatchRequest) -> dict:
+    return run_batch(
+        size=request.size,
+        weighted=request.weighted,
+        loop_factor=request.loop_factor,
+        count=request.count,
     )

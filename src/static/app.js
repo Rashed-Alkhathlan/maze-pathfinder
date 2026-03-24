@@ -28,6 +28,12 @@ const dom = {
   panelGrid: document.querySelector("#panel-grid"),
   panels: [...document.querySelectorAll(".solver-panel")],
   runButton: document.querySelector("#run-button"),
+  scenarioGrid: document.querySelector("#scenario-grid"),
+  scenarioDescription: document.querySelector("#scenario-description"),
+  batchButton: document.querySelector("#batch-button"),
+  batchCount: document.querySelector("#batch-count"),
+  batchResults: document.querySelector("#batch-results"),
+  batchTableBody: document.querySelector("#batch-table tbody"),
 };
 
 const state = {
@@ -37,7 +43,26 @@ const state = {
   lastTick: 0,
   speedMultiplier: Number(dom.speed.value),
   eventRate: DEFAULT_EVENT_RATE,
+  scenarioMeta: null,
 };
+
+/* ---------- cached scenario metadata ---------- */
+let scenarioCache = null;
+
+async function fetchScenarios() {
+  if (scenarioCache) return scenarioCache;
+  try {
+    const res = await fetch("/api/scenarios");
+    scenarioCache = await res.json();
+  } catch {
+    scenarioCache = [];
+  }
+  return scenarioCache;
+}
+
+fetchScenarios();
+
+/* ---------- event listeners ---------- */
 
 dom.speed.addEventListener("input", () => {
   state.speedMultiplier = Number(dom.speed.value);
@@ -50,10 +75,127 @@ dom.loopFactor.addEventListener("input", () => {
 
 dom.form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  clearActiveScenario();
   await loadRun(true);
 });
 
 window.addEventListener("resize", () => renderAll(performance.now()));
+
+/* ---------- scenario buttons ---------- */
+
+dom.scenarioGrid.addEventListener("click", async (event) => {
+  const btn = event.target.closest(".scenario-btn");
+  if (!btn || btn.disabled) return;
+
+  const algorithm = btn.dataset.algorithm;
+  const caseName = btn.dataset.case;
+
+  clearActiveScenario();
+  btn.classList.add("is-active");
+
+  const scenarios = await fetchScenarios();
+  const meta = scenarios.find(
+    (s) => s.algorithm === algorithm && s.case === caseName
+  );
+
+  if (meta) {
+    dom.scenarioDescription.innerHTML = `
+      <p class="scenario-desc-title"><strong>${algorithm}</strong> — ${caseName} case</p>
+      <p>${meta.description}</p>
+    `;
+  }
+
+  disableAllScenarioButtons(true);
+  setRunState(`Running ${algorithm} ${caseName} case scenario...`);
+
+  try {
+    const response = await fetch("/api/scenarios/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ algorithm, case: caseName }),
+    });
+    if (!response.ok) throw new Error(`Request failed (${response.status})`);
+    const payload = await response.json();
+
+    /* update control card to reflect the scenario settings */
+    if (meta) {
+      dom.size.value = meta.size;
+      dom.weighted.checked = meta.weighted;
+      dom.loopFactor.value = meta.loop_factor;
+      dom.loopFactorValue.textContent = meta.loop_factor.toFixed(2);
+    }
+
+    prepareRun(payload, true);
+  } catch (err) {
+    setRunState(err.message);
+  } finally {
+    disableAllScenarioButtons(false);
+  }
+});
+
+function clearActiveScenario() {
+  dom.scenarioGrid
+    .querySelectorAll(".scenario-btn.is-active")
+    .forEach((b) => b.classList.remove("is-active"));
+}
+
+function disableAllScenarioButtons(disabled) {
+  dom.scenarioGrid
+    .querySelectorAll(".scenario-btn")
+    .forEach((b) => (b.disabled = disabled));
+}
+
+/* ---------- batch run ---------- */
+
+dom.batchButton.addEventListener("click", async () => {
+  const count = Math.max(1, Math.min(50, Number(dom.batchCount.value) || 10));
+  dom.batchCount.value = count;
+
+  dom.batchButton.disabled = true;
+  dom.batchButton.textContent = `Running ${count} mazes...`;
+
+  try {
+    const response = await fetch("/api/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        size: Number(dom.size.value),
+        weighted: dom.weighted.checked,
+        loop_factor: Number(dom.loopFactor.value),
+        count,
+      }),
+    });
+    if (!response.ok) throw new Error(`Batch failed (${response.status})`);
+    const data = await response.json();
+    renderBatchResults(data);
+  } catch (err) {
+    dom.batchResults.style.display = "none";
+    setRunState(err.message);
+  } finally {
+    dom.batchButton.disabled = false;
+    dom.batchButton.textContent = "Run Batch";
+  }
+});
+
+function renderBatchResults(data) {
+  dom.batchTableBody.innerHTML = "";
+  for (const alg of data.algorithms) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${alg.algorithm}</strong></td>
+      <td>${alg.nodes_explored.mean.toFixed(1)}</td>
+      <td>${alg.runtime_ms.mean.toFixed(3)} ms</td>
+      <td>${alg.path_length.mean.toFixed(1)}</td>
+      <td>${alg.path_cost.mean.toFixed(1)}</td>
+      <td>${alg.path_cost.min}</td>
+      <td>${alg.path_cost.max}</td>
+    `;
+    dom.batchTableBody.append(row);
+  }
+  dom.batchResults.style.display = "";
+}
+
+/* ---------- main run logic ---------- */
 
 async function loadRun(focusPanels = false) {
   cancelAnimationFrame(state.animationFrame);

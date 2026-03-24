@@ -512,6 +512,10 @@ tbody tr.is-complete {
     align-items: start;
     flex-direction: column;
   }
+
+  .scenario-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 760px) {
@@ -522,7 +526,9 @@ tbody tr.is-complete {
 
   .hero,
   .panel-stage,
-  .comparison-card {
+  .comparison-card,
+  .scenario-card,
+  .batch-card {
     padding: 18px;
     border-radius: 26px;
   }
@@ -547,4 +553,224 @@ tbody tr.is-complete {
   .panel-grid {
     grid-template-columns: 1fr;
   }
+
+  .scenario-grid {
+    grid-template-columns: 1fr;
+  }
 }
+
+/* =============================================
+   Scenario Case-Analysis Section
+   ============================================= */
+
+.scenario-card {
+  margin-top: 14px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 252, 248, 0.96);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.scenario-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--cyan), var(--coral), var(--amber), var(--mint));
+}
+
+.scenario-card .section-heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.scenario-subtitle,
+.batch-subtitle {
+  color: var(--ink-500);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.scenario-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scenario-algo-title {
+  margin: 0 0 4px;
+  font-family: Baskerville, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.15rem;
+  color: var(--ink-950);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+/* algorithm accent colour per column */
+.scenario-column[data-algo="BFS"] .scenario-algo-title {
+  color: #1ba8d9;
+}
+.scenario-column[data-algo="DFS"] .scenario-algo-title {
+  color: var(--coral);
+}
+.scenario-column[data-algo="Dijkstra"] .scenario-algo-title {
+  color: #d08a18;
+}
+.scenario-column[data-algo="A*"] .scenario-algo-title {
+  color: var(--mint);
+}
+
+.scenario-btn {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+  color: #fffaf0;
+}
+
+.scenario-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.scenario-btn:active {
+  transform: scale(0.97);
+}
+
+.scenario-btn:disabled {
+  opacity: 0.66;
+  cursor: progress;
+  transform: none;
+}
+
+/* best = mint/green */
+.scenario-best {
+  background: linear-gradient(135deg, var(--mint), #5dd49a);
+  box-shadow: 0 10px 22px rgba(19, 184, 138, 0.22);
+}
+
+/* average = amber/gold */
+.scenario-average {
+  background: linear-gradient(135deg, var(--amber), #e6c23a);
+  box-shadow: 0 10px 22px rgba(243, 161, 39, 0.22);
+}
+
+/* worst = coral/red */
+.scenario-worst {
+  background: linear-gradient(135deg, var(--coral), #c02010);
+  box-shadow: 0 10px 22px rgba(235, 93, 58, 0.22);
+}
+
+/* active pulsation */
+.scenario-btn.is-active {
+  animation: scenarioPulse 1.6s ease-in-out infinite;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6), 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes scenarioPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255,255,255,0.6), 0 12px 28px rgba(0,0,0,0.18); }
+  50%      { box-shadow: 0 0 0 6px rgba(255,255,255,0.3), 0 14px 34px rgba(0,0,0,0.24); }
+}
+
+.scenario-description {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(8, 17, 32, 0.04), rgba(8, 17, 32, 0.02));
+  color: var(--ink-800);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  min-height: 52px;
+}
+
+.scenario-description p {
+  margin: 0 0 4px;
+}
+
+.scenario-desc-title {
+  font-size: 0.96rem;
+  color: var(--ink-950);
+}
+
+/* =============================================
+   Batch Benchmark Section
+   ============================================= */
+
+.batch-card {
+  margin-top: 14px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 252, 248, 0.96);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.batch-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--amber), var(--lime));
+}
+
+.batch-card .section-heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.batch-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.batch-label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-800);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.batch-label input {
+  width: 90px;
+  border: 1px solid rgba(23, 48, 77, 0.18);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink-950);
+  font: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.batch-label input:focus {
+  outline: 2px solid rgba(32, 201, 255, 0.26);
+  border-color: rgba(32, 201, 255, 0.56);
+}
+
+#batch-button {
+  background: linear-gradient(135deg, var(--amber), #e6c23a);
+  box-shadow: 0 12px 26px rgba(243, 161, 39, 0.22);
+}
+

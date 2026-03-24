@@ -111,8 +111,8 @@ def generate_ranked_candidate(
     size: int,
     weighted: bool,
     loop_factor: float,
-    seed: int,
-) -> tuple[Maze, list[SolverResult]]:
+    seed: int):
+
     maze = Maze.generate(
         size=size,
         weighted=weighted,
@@ -124,13 +124,35 @@ def generate_ranked_candidate(
     return maze, results
 
 
+def run_single_seed(
+    *,
+    size: int,
+    seed: int,
+    weighted: bool,
+    loop_factor: float,
+) -> dict:
+    """Run all algorithms on a single exact seed (no candidate selection)."""
+    maze, results = generate_ranked_candidate(
+        size=size,
+        weighted=weighted,
+        loop_factor=loop_factor,
+        seed=seed,
+    )
+    evaluate_optimality(results)
+    return {
+        "seed": seed,
+        "maze": maze.to_dict(),
+        "algorithms": [result.to_payload() for result in results],
+    }
+
+
 def run_algorithm_suite(
     *,
     size: int = 15,
     seed: int | None = None,
     weighted: bool = False,
-    loop_factor: float = 0.18,
-) -> dict:
+    loop_factor: float = 0.18):
+    
     resolved_seed = normalize_seed(seed)
     best_maze = None
     best_results = None
@@ -155,4 +177,60 @@ def run_algorithm_suite(
         "seed": resolved_seed,
         "maze": best_maze.to_dict(),
         "algorithms": [result.to_payload() for result in best_results],
+    }
+
+
+def run_batch(
+    *,
+    size: int = 15,
+    weighted: bool = False,
+    loop_factor: float = 0.18,
+    count: int = 10,
+) -> dict:
+    """Run *count* random mazes and return per‑algorithm averaged metrics."""
+    from collections import defaultdict
+
+    accumulator: dict[str, list[dict]] = defaultdict(list)
+
+    for _ in range(count):
+        seed = normalize_seed(None)
+        maze = Maze.generate(
+            size=size,
+            weighted=weighted,
+            seed=seed,
+            loop_factor=loop_factor,
+        )
+        results = [solver(maze) for _, solver in ALGORITHMS]
+        evaluate_optimality(results)
+        for result in results:
+            accumulator[result.algorithm].append({
+                "nodes_explored": result.metrics.nodes_explored,
+                "frontier_peak": result.metrics.frontier_peak,
+                "path_length": result.metrics.path_length,
+                "path_cost": result.metrics.path_cost,
+                "runtime_ms": result.metrics.runtime_ms,
+            })
+
+    summary = []
+    for name, _ in ALGORITHMS:
+        entries = accumulator[name]
+        n = len(entries)
+        if n == 0:
+            continue
+        agg: dict = {"algorithm": name}
+        for key in ("nodes_explored", "frontier_peak", "path_length", "path_cost", "runtime_ms"):
+            values = [e[key] for e in entries]
+            agg[key] = {
+                "mean": round(sum(values) / n, 2),
+                "min": round(min(values), 2),
+                "max": round(max(values), 2),
+            }
+        summary.append(agg)
+
+    return {
+        "count": count,
+        "size": size,
+        "weighted": weighted,
+        "loop_factor": loop_factor,
+        "algorithms": summary,
     }

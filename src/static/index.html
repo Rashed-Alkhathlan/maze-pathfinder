@@ -45,6 +45,47 @@
         </div>
       </section>
 
+      <!-- Scenario Case Analysis -->
+      <section class="scenario-card">
+        <div class="section-heading">
+          <h2>Case Analysis</h2>
+          <span class="scenario-subtitle">Per‑algorithm best / worst / average scenarios with curated seeds</span>
+        </div>
+        <div class="scenario-grid" id="scenario-grid">
+          <!-- BFS column -->
+          <div class="scenario-column" data-algo="BFS">
+            <h3 class="scenario-algo-title">BFS</h3>
+            <button class="scenario-btn scenario-best" data-algorithm="BFS" data-case="best">Best Case</button>
+            <button class="scenario-btn scenario-average" data-algorithm="BFS" data-case="average">Average Case</button>
+            <button class="scenario-btn scenario-worst" data-algorithm="BFS" data-case="worst">Worst Case</button>
+          </div>
+          <!-- DFS column -->
+          <div class="scenario-column" data-algo="DFS">
+            <h3 class="scenario-algo-title">DFS</h3>
+            <button class="scenario-btn scenario-best" data-algorithm="DFS" data-case="best">Best Case</button>
+            <button class="scenario-btn scenario-average" data-algorithm="DFS" data-case="average">Average Case</button>
+            <button class="scenario-btn scenario-worst" data-algorithm="DFS" data-case="worst">Worst Case</button>
+          </div>
+          <!-- Dijkstra column -->
+          <div class="scenario-column" data-algo="Dijkstra">
+            <h3 class="scenario-algo-title">Dijkstra</h3>
+            <button class="scenario-btn scenario-best" data-algorithm="Dijkstra" data-case="best">Best Case</button>
+            <button class="scenario-btn scenario-average" data-algorithm="Dijkstra" data-case="average">Average Case</button>
+            <button class="scenario-btn scenario-worst" data-algorithm="Dijkstra" data-case="worst">Worst Case</button>
+          </div>
+          <!-- A* column -->
+          <div class="scenario-column" data-algo="A*">
+            <h3 class="scenario-algo-title">A*</h3>
+            <button class="scenario-btn scenario-best" data-algorithm="A*" data-case="best">Best Case</button>
+            <button class="scenario-btn scenario-average" data-algorithm="A*" data-case="average">Average Case</button>
+            <button class="scenario-btn scenario-worst" data-algorithm="A*" data-case="worst">Worst Case</button>
+          </div>
+        </div>
+        <div class="scenario-description" id="scenario-description">
+          <p>Click a button above to run a curated scenario that demonstrates a specific algorithm's behaviour.</p>
+        </div>
+      </section>
+
       <section class="summary-strip">
         <div class="summary-card">
           <span class="summary-label">Seed</span>
@@ -122,6 +163,37 @@
                 <th>Path Len</th>
                 <th>Path Cost</th>
                 <th>Found</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Batch Run Section -->
+      <section class="batch-card">
+        <div class="section-heading">
+          <h2>Batch Benchmark</h2>
+          <span class="batch-subtitle">Run multiple random mazes and average the results</span>
+        </div>
+        <div class="batch-controls">
+          <label class="batch-label">
+            <span>Number of runs</span>
+            <input id="batch-count" type="number" min="1" max="50" value="10" />
+          </label>
+          <button id="batch-button" type="button">Run Batch</button>
+        </div>
+        <div class="table-wrap" id="batch-results" style="display: none;">
+          <table id="batch-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Avg Explored</th>
+                <th>Avg Runtime</th>
+                <th>Avg Path Len</th>
+                <th>Avg Path Cost</th>
+                <th>Min Cost</th>
+                <th>Max Cost</th>
               </tr>
             </thead>
             <tbody></tbody>
