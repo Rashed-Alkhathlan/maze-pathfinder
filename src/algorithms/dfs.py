@@ -1,4 +1,5 @@
 from time import perf_counter
+import random
 
 from src.algorithms.common import record_event, result_from_search
 
@@ -45,6 +46,7 @@ def solve(maze):
             break
 
         neighbors = maze.neighbors(node)
+        random.shuffle(neighbors)
         for neighbor in reversed(neighbors):
             if neighbor in parents:
                 continue
